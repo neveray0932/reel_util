@@ -65,9 +65,9 @@
         }
         .grid-container {
             display: grid;
-            gap: 5px;
+            gap: 2px;
             margin: 20px auto;
-            max-width: 800px;
+            max-width: 350px;
         }
         .grid-item {
             aspect-ratio: 1;
@@ -76,19 +76,34 @@
             justify-content: center;
             background-color: #f0f0f0;
             border: 1px solid #ccc;
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
-            min-width: 50px;
-            min-height: 50px;
+            min-width: 5px;
+            min-height: 5px;
             color: #000;
             position: relative;
         }
+        .grid-item input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 0;
+            margin: 0;
+            outline: none;
+        }
+        .grid-item input:focus {
+            background-color: #e0e0e0;
+        }
         .grid-item .index {
             position: absolute;
-            top: 2px;
-            right: 2px;
+            top: 1px;
+            right: 1px;
             font-size: 12px;
-            color: #666;
+            color: #f10c0c;
         }
         .grid-label {
             text-align: center;
@@ -131,11 +146,97 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+        .instructions h3 {
+            margin: 0;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .instructions h3:after {
+            content: '▼';
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+        .instructions.collapsed h3:after {
+            transform: rotate(-90deg);
+        }
+        .instructions-content {
+            margin-top: 15px;
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+            max-height: 1000px;
+        }
+        .instructions.collapsed .instructions-content {
+            max-height: 0;
+            margin-top: 0;
+        }
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .instructions ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        .instructions ul li {
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>盤面轉換工具</h1>
+        <div class="instructions">
+            <h3 onclick="toggleInstructions(this.parentElement)">使用說明</h3>
+            <div class="instructions-content">
+                <ol>
+                    <li>設定盤面大小：
+                        <ul>
+                            <li>輸入行數(rows)和列數(columns)</li>
+                            <li>預設為 3x3 的盤面</li>
+                        </ul>
+                    </li>
+                    <li>選擇盤面類型：
+                        <ul>
+                            <li>Client 盤面：數字由上到下、由左到右排列</li>
+                            <li>Server 盤面：數字由左到右、由上到下排列</li>
+                        </ul>
+                    </li>
+                    <li>輸入方式（二選一）：
+                        <ul>
+                            <li>在下方文字框輸入數字陣列（用逗號分隔）</li>
+                            <li>直接點擊「轉換」按鈕，會出現可編輯的空盤面</li>
+                            <li>在盤面格子中直接輸入數字</li>
+                        </ul>
+                    </li>
+                    <li>美化功能（選用）：
+                        <ul>
+                            <li>勾選「套用美化」可以將數字轉換為符號</li>
+                            <li>可以自訂符號對應的數字</li>
+                        </ul>
+                    </li>
+                    <li>轉換結果：
+                        <ul>
+                            <li>上方顯示輸入的盤面</li>
+                            <li>下方顯示轉換後的數字陣列</li>
+                            <li>右上角紅色數字為索引位置</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+        </div>
         <div class="dimension-inputs">
             <div class="dimension-input">
                 <label for="rows">行數(rows)：</label>
@@ -264,31 +365,122 @@
                 }
             }
             
-            for (let i = 0; i < matrix.length; i++) {
-                for (let j = 0; j < matrix[i].length; j++) {
+            const inputType = document.querySelector('input[name="inputType"]:checked').value;
+            let index = 0;
+            
+            // 建立顯示矩陣
+            const displayMatrix = [];
+            const rows = matrix.length;
+            const cols = matrix[0].length;
+            
+            // 初始化顯示矩陣
+            for (let i = 0; i < rows; i++) {
+                displayMatrix[i] = new Array(cols);
+            }
+            
+            // 根據盤面類型填充顯示矩陣
+            if (inputType === 'client') {
+                // Client 盤面：由上到下，由左到右填充
+                for (let j = 0; j < cols; j++) {
+                    for (let i = 0; i < rows; i++) {
+                        displayMatrix[i][j] = {
+                            value: matrix[i][j],
+                            index: index++
+                        };
+                    }
+                }
+            } else {
+                // Server 盤面：由左到右，由上到下填充
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        displayMatrix[i][j] = {
+                            value: matrix[i][j],
+                            index: index++
+                        };
+                    }
+                }
+            }
+            
+            // 按照一般順序（由上到下，由左到右）顯示盤面
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
                     const div = document.createElement('div');
                     div.className = 'grid-item';
-                    const value = matrix[i][j];
-                    div.textContent = beautify ? getSymbolText(value, symbolConfig) : value;
+                    const cellData = displayMatrix[i][j];
+                    
+                    // 創建輸入框
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = beautify ? getSymbolText(cellData.value, symbolConfig) : cellData.value;
+                    input.dataset.row = i;
+                    input.dataset.col = j;
                     if (beautify) {
-                        div.style.color = getSymbolColor(value, symbolConfig);
+                        input.style.color = getSymbolColor(cellData.value, symbolConfig);
                     }
+                    
+                    // 添加輸入事件處理
+                    input.addEventListener('input', function(e) {
+                        const newValue = parseInt(e.target.value);
+                        if (!isNaN(newValue)) {
+                            const row = parseInt(e.target.dataset.row);
+                            const col = parseInt(e.target.dataset.col);
+                            matrix[row][col] = newValue;
+                            updateInputArray(matrix);
+                        }
+                    });
+                    
+                    // 創建索引元素
+                    const indexSpan = document.createElement('span');
+                    indexSpan.className = 'index';
+                    indexSpan.textContent = cellData.index;
+                    
+                    div.appendChild(input);
+                    div.appendChild(indexSpan);
                     grid.appendChild(div);
                 }
             }
         }
 
+        function updateInputArray(matrix) {
+            const inputType = document.querySelector('input[name="inputType"]:checked').value;
+            const numbers = [];
+            const rows = matrix.length;
+            const cols = matrix[0].length;
+            
+            if (inputType === 'client') {
+                for (let j = 0; j < cols; j++) {
+                    for (let i = 0; i < rows; i++) {
+                        numbers.push(matrix[i][j]);
+                    }
+                }
+            } else {
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        numbers.push(matrix[i][j]);
+                    }
+                }
+            }
+            
+            document.getElementById('inputArray').value = numbers.join(', ');
+        }
+
         function convert() {
             const rows = parseInt(document.getElementById('rows').value);
             const columns = parseInt(document.getElementById('columns').value);
-            const input = document.getElementById('inputArray').value;
-            const numbers = input.split(',').map(num => parseInt(num.trim()));
-            const result = document.getElementById('result');
+            const input = document.getElementById('inputArray').value.trim();
             const inputType = document.querySelector('input[name="inputType"]:checked').value;
+            const result = document.getElementById('result');
             
-            if (numbers.length !== rows * columns) {
-                result.textContent = `請輸入 ${rows * columns} 個數字！`;
-                return;
+            // 如果沒有輸入，創建空矩陣
+            let numbers;
+            if (input === '') {
+                numbers = new Array(rows * columns).fill(0);
+            } else {
+                numbers = input.split(',').map(num => parseInt(num.trim()));
+                if (numbers.length !== rows * columns) {
+                    result.textContent = `請輸入 ${rows * columns} 個數字！`;
+                    return;
+                }
             }
 
             // 建立輸入矩陣
@@ -333,6 +525,10 @@
             }
 
             result.textContent = `${inputType === 'client' ? 'Server' : 'Client'} 盤面結果：\n${outputArray.join(', ')}`;
+        }
+
+        function toggleInstructions(element) {
+            element.classList.toggle('collapsed');
         }
     </script>
 </body>
