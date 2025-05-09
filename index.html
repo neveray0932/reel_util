@@ -193,6 +193,19 @@
         .instructions ul li {
             margin-bottom: 5px;
         }
+        .grid-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result-text {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -281,7 +294,7 @@
         </div>
         <div class="input-group">
             <label for="inputArray">請輸入數字陣列（用逗號分隔）：</label>
-            <textarea id="inputArray" placeholder="例如：1,2,3,4,5,6,7,8,9"></textarea>
+            <textarea id="inputArray" placeholder="例如：[1,2,3,4,5,6,7,8,9]"></textarea>
         </div>
         <div class="button-group">
             <button onclick="convert()">轉換</button>
@@ -471,60 +484,117 @@
             const inputType = document.querySelector('input[name="inputType"]:checked').value;
             const result = document.getElementById('result');
             
-            // 如果沒有輸入，創建空矩陣
-            let numbers;
-            if (input === '') {
-                numbers = new Array(rows * columns).fill(0);
-            } else {
-                numbers = input.split(',').map(num => parseInt(num.trim()));
+            // 解析輸入的陣列
+            let inputArrays;
+            try {
+                // 如果沒有輸入，創建空盤面
+                if (input === '') {
+                    inputArrays = [new Array(rows * columns).fill(0)];
+                } else {
+                    // 嘗試解析 JSON 格式
+                    inputArrays = JSON.parse(input);
+                    console.log('前',inputArrays);
+                    
+                    // 確保是陣列格式
+                    if (!Array.isArray(inputArrays)) {
+                        result.textContent = '請輸入有效的陣列格式！';
+                        return;
+                    }
+                    // 檢查是否為多個盤面（二維陣列）
+                    if (Array.isArray(inputArrays[0])) {
+                        // 多個盤面
+                        for (const array of inputArrays) {
+                            if (!Array.isArray(array) || array.length !== rows * columns) {
+                                result.textContent = `每個盤面必須包含 ${rows * columns} 個數字！`;
+                                return;
+                            }
+                        }
+                    } else {
+                        // 單一盤面
+                        if (inputArrays.length !== rows * columns) {
+                            result.textContent = `請輸入 ${rows * columns} 個數字！`;
+                            return;
+                        }
+                        inputArrays = [inputArrays];
+                    }
+                }
+            } catch (e) {
+                // 如果解析失敗，嘗試解析逗號分隔的數字
+                const numbers = input.split(',').map(num => parseInt(num.trim()));
                 if (numbers.length !== rows * columns) {
                     result.textContent = `請輸入 ${rows * columns} 個數字！`;
                     return;
                 }
+                inputArrays = [numbers];
+                
             }
+            console.log(inputArrays);
 
-            // 建立輸入矩陣
-            const inputMatrix = [];
-            if (inputType === 'client') {
-                // 從上到下，從左到右讀取
-                for (let j = 0; j < columns; j++) {
-                    for (let i = 0; i < rows; i++) {
-                        if (!inputMatrix[i]) inputMatrix[i] = [];
-                        inputMatrix[i][j] = numbers[j * rows + i];
-                    }
-                }
-            } else {
-                // 從左到右，從上到下讀取
-                for (let i = 0; i < rows; i++) {
-                    inputMatrix[i] = [];
+            // 清空結果區域
+            result.innerHTML = '';
+            
+            // 處理每個輸入陣列
+            inputArrays.forEach((numbers, arrayIndex) => {
+                // 建立輸入矩陣
+                const inputMatrix = [];
+                if (inputType === 'client') {
+                    // 從上到下，從左到右讀取
                     for (let j = 0; j < columns; j++) {
-                        inputMatrix[i][j] = numbers[i * columns + j];
+                        for (let i = 0; i < rows; i++) {
+                            if (!inputMatrix[i]) inputMatrix[i] = [];
+                            inputMatrix[i][j] = numbers[j * rows + i];
+                        }
                     }
-                }
-            }
-
-            // 顯示輸入矩陣
-            createGrid(inputMatrix, 'inputGrid');
-
-            // 轉換為另一種格式
-            const outputArray = [];
-            if (inputType === 'client') {
-                // 轉換為 Server 格式
-                for (let i = 0; i < rows; i++) {
-                    for (let j = 0; j < columns; j++) {
-                        outputArray.push(inputMatrix[i][j]);
-                    }
-                }
-            } else {
-                // 轉換為 Client 格式
-                for (let j = 0; j < columns; j++) {
+                } else {
+                    // 從左到右，從上到下讀取
                     for (let i = 0; i < rows; i++) {
-                        outputArray.push(inputMatrix[i][j]);
+                        inputMatrix[i] = [];
+                        for (let j = 0; j < columns; j++) {
+                            inputMatrix[i][j] = numbers[i * columns + j];
+                        }
                     }
                 }
-            }
 
-            result.textContent = `${inputType === 'client' ? 'Server' : 'Client'} 盤面結果：\n${outputArray.join(', ')}`;
+                // 顯示輸入矩陣
+                const gridContainer = document.createElement('div');
+                gridContainer.className = 'grid-section';
+                if (inputArrays.length > 1) {
+                    const title = document.createElement('div');
+                    title.className = 'grid-label';
+                    title.textContent = `盤面 ${arrayIndex + 1}`;
+                    gridContainer.appendChild(title);
+                }
+                const grid = document.createElement('div');
+                grid.className = 'grid-container';
+                grid.id = `inputGrid${arrayIndex}`;
+                gridContainer.appendChild(grid);
+                document.getElementById('result').appendChild(gridContainer);
+                createGrid(inputMatrix, `inputGrid${arrayIndex}`);
+
+                // 轉換為另一種格式
+                const outputArray = [];
+                if (inputType === 'client') {
+                    // 轉換為 Server 格式
+                    for (let i = 0; i < rows; i++) {
+                        for (let j = 0; j < columns; j++) {
+                            outputArray.push(inputMatrix[i][j]);
+                        }
+                    }
+                } else {
+                    // 轉換為 Client 格式
+                    for (let j = 0; j < columns; j++) {
+                        for (let i = 0; i < rows; i++) {
+                            outputArray.push(inputMatrix[i][j]);
+                        }
+                    }
+                }
+
+                // 顯示轉換結果
+                const resultText = document.createElement('div');
+                resultText.className = 'result-text';
+                resultText.textContent = `${inputType === 'client' ? 'Server' : 'Client'} 盤面結果：\n${JSON.stringify(outputArray)}`;
+                gridContainer.appendChild(resultText);
+            });
         }
 
         function toggleInstructions(element) {
